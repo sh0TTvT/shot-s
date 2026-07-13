@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+
+# graphify 仅用于本地结构分析，不属于网站交付物。
+graphify-out/
