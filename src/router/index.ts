@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from "vue-router";
-import { workspaceWindowIds, type WorkspaceWindowId } from "../types/workspace";
+import { workspaceSectionIds, type WorkspaceSectionId } from "../types/workspace";
 
 export const router = createRouter({
   history: createWebHashHistory(),
@@ -7,11 +7,11 @@ export const router = createRouter({
     { path: "/", name: "index", component: { template: "<span />" } },
     { path: "/home", name: "home", component: { template: "<span />" } },
     {
-      path: "/workspace/:windowId",
+      path: "/workspace/:sectionId",
       name: "workspace",
       component: { template: "<span />" },
       beforeEnter: (to) =>
-        workspaceWindowIds.includes(to.params.windowId as WorkspaceWindowId)
+        workspaceSectionIds.includes(to.params.sectionId as WorkspaceSectionId)
           ? true
           : { name: "home" },
     },

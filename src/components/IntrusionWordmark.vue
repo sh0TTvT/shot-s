@@ -25,7 +25,6 @@ const textShards: TextShard[] = [
   { id: 5, clipPath: "polygon(65% 0%, 100% 0%, 100% 50%, 85% 65%, 55% 45%)", baseX: 1, baseY: -1, depth: 1, travel: 5 },
   { id: 6, clipPath: "polygon(55% 45%, 85% 65%, 100% 50%, 100% 100%, 60% 100%)", baseX: 1, baseY: 1, depth: 1, travel: 8 },
   { id: 7, clipPath: "polygon(25% 20%, 45% 10%, 50% 40%, 30% 50%)", baseX: -0.5, baseY: -1, depth: 2, travel: 13 },
-  { id: 8, clipPath: "polygon(65% 40%, 85% 30%, 90% 70%, 70% 80%)", baseX: 1, baseY: 0, depth: 2, travel: 17 },
   { id: 9, clipPath: "polygon(45% 60%, 60% 50%, 70% 80%, 50% 90%)", baseX: 0.5, baseY: 1, depth: 2, travel: 11 },
 ];
 
@@ -144,7 +143,6 @@ onBeforeUnmount(() => {
               v-for="shard in textShards"
               :key="shard.id"
               class="intrusion-shard"
-              :class="{ 'is-glass': shard.id === 8 }"
               :style="{ clipPath: shard.clipPath }"
             >Sh0TT</span>
             <span class="intrusion-slice intrusion-slice-left">Sh0TT</span>
@@ -243,14 +241,13 @@ onBeforeUnmount(() => {
 .intrusion-slice {
   grid-area: 1 / 1;
   padding-right: 0.14em;
-  font-family: "Playwrite NZ", cursive;
+  font-family: "Tektur", sans-serif;
   font-size: clamp(92px, 18vw, 230px);
-  font-optical-sizing: auto;
   font-style: normal;
-  font-weight: 400;
+  font-weight: 500;
   font-synthesis: none;
   line-height: 1;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.035em;
   white-space: nowrap;
   user-select: none;
 }
@@ -288,13 +285,6 @@ onBeforeUnmount(() => {
     filter 150ms ease,
     opacity 150ms ease;
   will-change: transform;
-}
-
-.intrusion-shard.is-glass {
-  background: rgba(255, 255, 255, calc(var(--field-strength) * 0.025));
-  backdrop-filter: blur(10px) brightness(1.06);
-  -webkit-backdrop-filter: blur(10px) brightness(1.06);
-  filter: brightness(calc(1 + var(--field-strength) * 0.12));
 }
 
 .intrusion-slice {

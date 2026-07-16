@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from "vue";
 import { useInteractionContext, type InteractionInput } from "../composables/useInteractionContext";
-import { workspaceLabels, type WorkspaceWindowId } from "../types/workspace";
-
-const props = defineProps<{ activeId?: WorkspaceWindowId }>();
+import { workspaceLabels, type WorkspaceSectionId } from "../types/workspace";
 
 const emit = defineEmits<{
-  open: [id: WorkspaceWindowId, trigger: HTMLButtonElement, input: InteractionInput];
+  open: [id: WorkspaceSectionId, input: InteractionInput];
 }>();
 
 const { setInteraction, clearInteraction } = useInteractionContext();
-const buttonRefs = new Map<WorkspaceWindowId, HTMLButtonElement>();
+const buttonRefs = new Map<WorkspaceSectionId, HTMLButtonElement>();
 let lastActivationInput: InteractionInput = "POINTER";
 
 const entries: Array<{
-  id: WorkspaceWindowId;
+  id: WorkspaceSectionId;
   index: string;
   category: string;
   title: string;
@@ -24,40 +22,37 @@ const entries: Array<{
   { id: "projects", index: "01", category: "ARCHIVE", title: "Projects.", description: "SELECTED BUILDS", hash: "0x91A4" },
   { id: "lab", index: "02", category: "EXPERIMENTS", title: "Lab.", description: "RUNNING EXPERIMENTS", hash: "0xC27E" },
   { id: "logs", index: "03", category: "LOGS", title: "Logs.", description: "FIELD NOTES", hash: "0x5B08" },
-  { id: "contact", index: "04", category: "CHANNEL", title: "Contact.", description: "DIRECT CHANNEL", hash: "0xE410" },
+  { id: "monologue", index: "04", category: "VOICE", title: "Monologue.", description: "FROM THE AUTHOR", hash: "0xE410" },
 ];
 
 const setButtonRef = (
-  id: WorkspaceWindowId,
+  id: WorkspaceSectionId,
   element: Element | ComponentPublicInstance | null,
 ) => {
   if (element instanceof HTMLButtonElement) buttonRefs.set(id, element);
 };
 
-const focusLauncher = (id: WorkspaceWindowId) => buttonRefs.get(id)?.focus();
+const focusLauncher = (id: WorkspaceSectionId) => buttonRefs.get(id)?.focus();
 defineExpose({ focusLauncher });
 
 const updateContext = (
-  id: WorkspaceWindowId,
+  id: WorkspaceSectionId,
   input: InteractionInput,
   action = "OPEN",
 ) => setInteraction(workspaceLabels[id], action, input);
 
-const resetButton = (id: WorkspaceWindowId) => {
-  if (props.activeId === id) updateContext(id, lastActivationInput, "WINDOW");
-  else clearInteraction(workspaceLabels[id]);
-};
+const resetButton = (id: WorkspaceSectionId) => clearInteraction(workspaceLabels[id]);
 
-const handleFocus = (id: WorkspaceWindowId, event: FocusEvent) => {
+const handleFocus = (id: WorkspaceSectionId, event: FocusEvent) => {
   const button = event.currentTarget as HTMLButtonElement;
   const input = button.matches(":focus-visible") ? "KEYBOARD" : lastActivationInput;
-  updateContext(id, input, props.activeId === id ? "WINDOW" : "OPEN");
+  updateContext(id, input);
 };
 
-const openWindow = (id: WorkspaceWindowId, event: MouseEvent) => {
+const openSection = (id: WorkspaceSectionId, event: MouseEvent) => {
   lastActivationInput = event.detail === 0 ? "KEYBOARD" : "POINTER";
-  updateContext(id, lastActivationInput, "WINDOW");
-  emit("open", id, event.currentTarget as HTMLButtonElement, lastActivationInput);
+  updateContext(id, lastActivationInput, "OPEN");
+  emit("open", id, lastActivationInput);
 };
 </script>
 
@@ -65,6 +60,7 @@ const openWindow = (id: WorkspaceWindowId, event: MouseEvent) => {
   <nav class="directory-launcher" aria-label="内容目录">
     <header class="directory-launcher__header">
       <span>&gt; SYS.EXPLORE</span>
+      <span class="directory-launcher__watermark" aria-hidden="true">EXPLORE</span>
       <span>DIR_LIST</span>
     </header>
 
@@ -74,11 +70,8 @@ const openWindow = (id: WorkspaceWindowId, event: MouseEvent) => {
         :key="entry.id"
         :ref="(element) => setButtonRef(entry.id, element)"
         class="directory-entry"
-        :class="{ 'directory-entry--active': activeId === entry.id }"
         type="button"
-        :disabled="activeId === entry.id"
-        :aria-expanded="activeId === entry.id"
-        @click="openWindow(entry.id, $event)"
+        @click="openSection(entry.id, $event)"
         @pointerenter="updateContext(entry.id, 'POINTER')"
         @pointerleave="resetButton(entry.id)"
         @focus="handleFocus(entry.id, $event)"
@@ -107,18 +100,45 @@ const openWindow = (id: WorkspaceWindowId, event: MouseEvent) => {
 }
 
 .directory-launcher__header {
+  position: relative;
   display: flex;
+  min-height: 22px;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: clamp(18px, 3vh, 30px);
   padding-inline: 3px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.28em;
+  isolation: isolate;
 }
 
-.directory-launcher__header span:first-child {
+.directory-launcher__header > span:not(.directory-launcher__watermark) {
+  position: relative;
+  z-index: 1;
+}
+
+.directory-launcher__header > span:first-child {
   color: var(--white);
+}
+
+.directory-launcher__watermark {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  z-index: 0;
+  color: var(--white);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(44px, 5.8vw, 76px);
+  font-weight: 500;
+  line-height: 0.8;
+  letter-spacing: 0.06em;
+  opacity: 0.05;
+  pointer-events: none;
+  transform: translateY(-50%);
+  user-select: none;
+  white-space: nowrap;
 }
 
 .directory-launcher__list {
@@ -155,22 +175,16 @@ const openWindow = (id: WorkspaceWindowId, event: MouseEvent) => {
 }
 
 .directory-entry:hover,
-.directory-entry:focus-visible,
-.directory-entry--active {
+.directory-entry:focus-visible {
   margin-left: 16px;
   box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--arc) 28%, transparent);
   text-shadow: 2px 0 rgba(255, 0, 0, 0.34), -2px 0 rgba(0, 255, 255, 0.34);
 }
 
 .directory-entry:hover::after,
-.directory-entry:focus-visible::after,
-.directory-entry--active::after {
+.directory-entry:focus-visible::after {
   height: 100%;
   opacity: 0.8;
-}
-
-.directory-entry:disabled {
-  cursor: default;
 }
 
 .directory-entry__inner {
@@ -237,10 +251,8 @@ const openWindow = (id: WorkspaceWindowId, event: MouseEvent) => {
 
 .directory-entry:hover .directory-entry__content small,
 .directory-entry:focus-visible .directory-entry__content small,
-.directory-entry--active .directory-entry__content small,
 .directory-entry:hover .directory-entry__hash,
-.directory-entry:focus-visible .directory-entry__hash,
-.directory-entry--active .directory-entry__hash {
+.directory-entry:focus-visible .directory-entry__hash {
   color: var(--arc);
   opacity: 1;
 }
@@ -261,8 +273,7 @@ const openWindow = (id: WorkspaceWindowId, event: MouseEvent) => {
   }
 
   .directory-entry:hover,
-  .directory-entry:focus-visible,
-  .directory-entry--active {
+  .directory-entry:focus-visible {
     margin-left: 6px;
   }
 

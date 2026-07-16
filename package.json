@@ -6,19 +6,20 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "check:dist": "node scripts/check-production-build.mjs",
     "typecheck": "vue-tsc -b",
     "preview": "vite preview"
   },
   "dependencies": {
-    "d3-contour": "^4.0.2",
+    "@fontsource/barlow-condensed": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/tektur": "^5.2.7",
     "gsap": "^3.13.0",
     "marked": "^16.1.2",
-    "simplex-noise": "^4.0.3",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@types/d3-contour": "^3.0.6",
     "@types/node": "^24.2.1",
     "@vitejs/plugin-vue": "^6.0.1",
     "typescript": "~5.8.3",

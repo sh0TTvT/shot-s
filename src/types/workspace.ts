@@ -1,10 +1,10 @@
-export const workspaceWindowIds = ["projects", "lab", "logs", "contact"] as const;
+export const workspaceSectionIds = ["projects", "lab", "logs", "monologue"] as const;
 
-export type WorkspaceWindowId = (typeof workspaceWindowIds)[number];
+export type WorkspaceSectionId = (typeof workspaceSectionIds)[number];
 
-export const workspaceLabels: Record<WorkspaceWindowId, string> = {
+export const workspaceLabels: Record<WorkspaceSectionId, string> = {
   projects: "DIR.PROJECTS",
   lab: "DIR.LAB",
   logs: "DIR.LOGS",
-  contact: "COMM.CONTACT",
+  monologue: "DIR.MONOLOGUE",
 };

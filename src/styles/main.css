@@ -63,41 +63,12 @@ input:focus-visible {
 
 .index-screen {
   position: relative;
+  z-index: 1;
   display: grid;
   min-height: 100svh;
   overflow: hidden;
   place-items: center;
-  isolation: isolate;
-  background:
-    radial-gradient(ellipse at 50% 46%, #141819 0%, #090b0c 34%, #030405 78%),
-    var(--obsidian);
-}
-
-.index-screen::after {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='indexNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='4' stitchTiles='stitchTiles'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23indexNoise)' opacity='.18'/%3E%3C/svg%3E");
-  content: "";
-  opacity: 0.16;
-  mix-blend-mode: soft-light;
-  pointer-events: none;
-}
-
-.index-contour-camera {
-  position: absolute;
-  inset: -7%;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.index-contour-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  opacity: 0.76;
-  mix-blend-mode: screen;
+  background: transparent;
 }
 
 .index-reveal-leave-active {
@@ -279,17 +250,44 @@ input:focus-visible {
   top: 75%;
 }
 
-.frame-version {
+.frame-scroll-progress {
   position: absolute;
   top: 50%;
   right: calc(var(--frame-inset) + 8px);
-  color: rgba(135, 144, 140, 0.42);
-  font-size: 10.5px;
-  line-height: 1;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  writing-mode: vertical-rl;
+  width: 1px;
   transform: translateY(-50%);
+}
+
+.frame-scroll-progress__track {
+  position: relative;
+  display: block;
+  width: 1px;
+  height: clamp(138px, 27vh, 210px);
+  overflow: hidden;
+  background: rgba(232, 236, 233, 0.18);
+}
+
+.frame-scroll-progress__fill {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: var(--arc);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 80ms linear;
+}
+
+.frame-scroll-progress__value {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  color: rgba(85, 230, 220, 0.78);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transform: translateX(-50%);
 }
 
 .overlay-panel {
@@ -436,9 +434,20 @@ input:focus-visible {
   }
 
   .overlay-panel-bottom-left,
-  .frame-version,
   .overlay-timezone {
     display: none;
+  }
+
+  .frame-scroll-progress {
+    right: calc(var(--frame-inset) + 6px);
+  }
+
+  .frame-scroll-progress__track {
+    height: clamp(112px, 22vh, 150px);
+  }
+
+  .frame-scroll-progress__value {
+    font-size: 7px;
   }
 
   .overlay-panel-top-right {

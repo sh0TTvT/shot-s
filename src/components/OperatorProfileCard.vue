@@ -1,8 +1,28 @@
 <script setup lang="ts">
-import avatarPlaceholder from "../assets/avatar-placeholder.svg";
+import { computed, onBeforeUnmount, ref } from "vue";
+import profileAvatar from "../assets/profile-avatar.jpg";
 import { useInteractionContext } from "../composables/useInteractionContext";
 
 const { setInteraction, clearInteraction } = useInteractionContext();
+const pointerOffset = ref({ x: 0, y: 0 });
+const profileFrameStyle = computed(() => ({
+  "--profile-pointer-x": `${pointerOffset.value.x}px`,
+  "--profile-pointer-y": `${pointerOffset.value.y}px`,
+}));
+
+const PROFILE_POINTER_OFFSET = 7;
+const ACTION_SCRAMBLE_INTERVAL = 60;
+const ACTION_SCRAMBLE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%*+-/<>[]";
+const ACTION_LABELS = {
+  GITHUB: "OPEN_GITHUB",
+  EMAIL: "COPY_EMAIL",
+  MONOLOGUE: "READ_MONOLOGUE",
+} as const;
+
+type ActionKey = keyof typeof ACTION_LABELS;
+
+const actionLabels = ref<Record<ActionKey, string>>({ ...ACTION_LABELS });
+const actionScrambleTimers = new Map<ActionKey, number>();
 
 const showProfileContext = (input: "POINTER" | "KEYBOARD") =>
   setInteraction("PROFILE", "INSPECT", input);
@@ -11,82 +31,175 @@ const showActionContext = (target: string, input: "POINTER" | "KEYBOARD") =>
   setInteraction(target, "EXECUTE", input);
 
 const clearProfileContext = () => clearInteraction();
+const copyEmail = () => navigator.clipboard.writeText("shothollis@gmail.com");
+
+const createScrambledLabel = (label: string) =>
+  Array.from(label, (character) => {
+    if (character === " " || character === "_") return character;
+    if (Math.random() < 0.12) return character;
+
+    const randomIndex = Math.floor(Math.random() * ACTION_SCRAMBLE_CHARACTERS.length);
+    return ACTION_SCRAMBLE_CHARACTERS[randomIndex];
+  }).join("");
+
+const clearActionScramble = (action: ActionKey) => {
+  const timer = actionScrambleTimers.get(action);
+  if (timer !== undefined) window.clearInterval(timer);
+
+  actionScrambleTimers.delete(action);
+  actionLabels.value[action] = ACTION_LABELS[action];
+};
+
+const isCoreActionAnimation = (event: AnimationEvent) =>
+  !event.pseudoElement && event.animationName.startsWith("profile-action-intrusion-core");
+
+const startActionScramble = (action: ActionKey, event: AnimationEvent) => {
+  if (
+    !isCoreActionAnimation(event) ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return;
+  }
+
+  clearActionScramble(action);
+  const originalLabel = ACTION_LABELS[action];
+
+  // WHY: 随机串只写入装饰层，避免按钮真实文案和读屏名称跟着抖动。
+  const scramble = () => {
+    actionLabels.value[action] = createScrambledLabel(originalLabel);
+  };
+
+  scramble();
+  actionScrambleTimers.set(action, window.setInterval(scramble, ACTION_SCRAMBLE_INTERVAL));
+};
+
+const stopActionScramble = (action: ActionKey, event: AnimationEvent) => {
+  if (!isCoreActionAnimation(event)) return;
+  clearActionScramble(action);
+};
+
+const updateProfileOffset = (event: PointerEvent) => {
+  if (event.pointerType !== "mouse") return;
+
+  const card = event.currentTarget as HTMLElement;
+  const bounds = card.getBoundingClientRect();
+  const normalizedX = Math.max(
+    -1,
+    Math.min(1, ((event.clientX - bounds.left) / bounds.width) * 2 - 1),
+  );
+  const normalizedY = Math.max(
+    -1,
+    Math.min(1, ((event.clientY - bounds.top) / bounds.height) * 2 - 1),
+  );
+
+  // WHY: 只做轻微平移，避免重新引入用户明确排除的倾斜与透视感。
+  pointerOffset.value = {
+    x: normalizedX * PROFILE_POINTER_OFFSET,
+    y: normalizedY * PROFILE_POINTER_OFFSET,
+  };
+};
+
+const leaveProfile = () => {
+  pointerOffset.value = { x: 0, y: 0 };
+  clearProfileContext();
+};
+
+onBeforeUnmount(() => {
+  actionScrambleTimers.forEach((timer) => window.clearInterval(timer));
+  actionScrambleTimers.clear();
+});
 </script>
 
 <template>
-  <div class="profile-frame">
+  <div
+    class="profile-frame"
+    :style="profileFrameStyle"
+  >
     <aside
       class="operator-profile-card"
       aria-labelledby="operator-name"
       @pointerenter="showProfileContext('POINTER')"
-      @pointerleave="clearProfileContext"
+      @pointermove="updateProfileOffset"
+      @pointerleave="leaveProfile"
       @focusin="showProfileContext('KEYBOARD')"
       @focusout="clearProfileContext"
     >
       <header class="profile-status-line">
-        <span>STATUS: SH0TT.OS</span>
+        <span>STATUS: Admin</span>
         <strong><i aria-hidden="true"></i> ACTIVE</strong>
       </header>
 
       <div class="profile-body">
         <section class="profile-identity">
           <span class="profile-avatar">
-            <img :src="avatarPlaceholder" alt="sh0TT 临时头像" />
-            <i aria-hidden="true"></i>
+            <img :src="profileAvatar" alt="sh0TT 头像" />
           </span>
           <span class="profile-title">
             <strong id="operator-name">sh0TT</strong>
-            <small>INDEPENDENT / PRODUCT DEVELOPER</small>
+            <small>Lv.22 Developer</small>
           </span>
         </section>
 
         <dl class="profile-specs">
           <div>
-            <dt>DESIGNATION</dt>
+            <dt>OPERATOR_CLASS</dt>
             <dd>CREATOR</dd>
           </div>
           <div>
-            <dt>PRODUCT_PWR</dt>
-            <dd>DESIGN / DELIVERY</dd>
+            <dt>LOGIC_STACK</dt>
+            <dd>JAVA / PYTHON</dd>
           </div>
           <div>
-            <dt>ENGINE_PWR</dt>
-            <dd>VUE / TYPESCRIPT</dd>
+            <dt>INTERFACE_STACK</dt>
+            <dd>VUE</dd>
           </div>
           <div>
-            <dt>LOCATION</dt>
-            <dd>REMOTE / UTC+08</dd>
+            <dt>MIND_PROFILE</dt>
+            <dd>INFP</dd>
           </div>
           <div class="profile-specs__network">
-            <dt>GITHUB_NET</dt>
-            <dd>ONLINE</dd>
+            <dt>SOURCE_LINK</dt>
+            <dd>shothollis@gmail.com</dd>
           </div>
         </dl>
       </div>
 
       <nav class="profile-actions" aria-label="个人快捷通道">
         <a
+          aria-label="OPEN_GITHUB"
+          :data-intrusion-label="actionLabels.GITHUB"
           href="https://github.com/sh0TTvT"
           target="_blank"
           rel="noreferrer"
           @pointerenter="showActionContext('GITHUB', 'POINTER')"
           @focus="showActionContext('GITHUB', 'KEYBOARD')"
+          @animationstart="startActionScramble('GITHUB', $event)"
+          @animationcancel="stopActionScramble('GITHUB', $event)"
         >
-          EXEC_GITHUB
+          <span class="profile-action-label" aria-hidden="true">{{ actionLabels.GITHUB }}</span>
         </a>
         <a
-          href="#/workspace/projects"
-          @pointerenter="showActionContext('PROJECTS', 'POINTER')"
-          @focus="showActionContext('PROJECTS', 'KEYBOARD')"
+          aria-label="COPY_EMAIL"
+          :data-intrusion-label="actionLabels.EMAIL"
+          href="#"
+          @click.prevent="copyEmail"
+          @pointerenter="showActionContext('EMAIL', 'POINTER')"
+          @focus="showActionContext('EMAIL', 'KEYBOARD')"
+          @animationstart="startActionScramble('EMAIL', $event)"
+          @animationcancel="stopActionScramble('EMAIL', $event)"
         >
-          EXEC_PROJECTS
+          <span class="profile-action-label" aria-hidden="true">{{ actionLabels.EMAIL }}</span>
         </a>
         <a
-          href="#/workspace/contact"
-          @pointerenter="showActionContext('CONTACT', 'POINTER')"
-          @focus="showActionContext('CONTACT', 'KEYBOARD')"
+          aria-label="READ_MONOLOGUE"
+          :data-intrusion-label="actionLabels.MONOLOGUE"
+          href="#/workspace/monologue"
+          @pointerenter="showActionContext('MONOLOGUE', 'POINTER')"
+          @focus="showActionContext('MONOLOGUE', 'KEYBOARD')"
+          @animationstart="startActionScramble('MONOLOGUE', $event)"
+          @animationcancel="stopActionScramble('MONOLOGUE', $event)"
         >
-          INIT_CONTACT
+          <span class="profile-action-label" aria-hidden="true">{{ actionLabels.MONOLOGUE }}</span>
         </a>
       </nav>
     </aside>
@@ -97,13 +210,19 @@ const clearProfileContext = () => clearInteraction();
 .profile-frame {
   width: 100%;
   padding: 3px;
-  transform: translateX(var(--profile-offset-x, 0px)) rotate(-1deg);
+  transform: translate3d(var(--profile-offset-x, 0px), 0, 0);
   transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.profile-frame:hover,
-.profile-frame:focus-within {
-  transform: translateX(var(--profile-offset-x, 0px)) rotate(0);
+@media (hover: hover) and (pointer: fine) {
+  .profile-frame:hover {
+    transform: translate3d(
+      calc(var(--profile-offset-x, 0px) + var(--profile-pointer-x, 0px)),
+      var(--profile-pointer-y, 0px),
+      0
+    );
+    transition-duration: 160ms;
+  }
 }
 
 .operator-profile-card {
@@ -190,12 +309,10 @@ const clearProfileContext = () => clearInteraction();
 }
 
 .profile-avatar {
-  position: relative;
   display: grid;
   width: 58px;
   height: 58px;
   overflow: hidden;
-  border: 1px solid var(--arc);
   place-items: center;
 }
 
@@ -207,13 +324,6 @@ const clearProfileContext = () => clearInteraction();
   mix-blend-mode: luminosity;
   opacity: 0.82;
   transition: filter 500ms ease, opacity 500ms ease, transform 500ms ease;
-}
-
-.profile-avatar i {
-  position: absolute;
-  inset: 2px;
-  border: 1px solid color-mix(in srgb, var(--arc) 46%, transparent);
-  pointer-events: none;
 }
 
 .operator-profile-card:hover .profile-avatar img,
@@ -305,34 +415,64 @@ const clearProfileContext = () => clearInteraction();
   justify-content: center;
   border: 1px solid var(--line);
   color: var(--white);
-  background: transparent;
+  background-color: transparent;
+  background-image: linear-gradient(90deg, transparent, rgba(85, 230, 220, 0.62), transparent);
+  background-position: 50% -1px;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
   font-size: 9px;
   letter-spacing: 0.1em;
   text-decoration: none;
+  text-shadow: none;
   isolation: isolate;
-  transition: border-color 400ms cubic-bezier(0.16, 1, 0.3, 1), color 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 160ms ease;
+}
+
+.profile-actions a::before,
+.profile-actions a::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  color: rgba(232, 236, 233, 0.92);
+  content: attr(data-intrusion-label);
+  font: inherit;
+  letter-spacing: inherit;
+  opacity: 0;
+  place-items: center;
+  pointer-events: none;
+  will-change: opacity, transform, filter;
+}
+
+.profile-action-label {
+  position: relative;
+  z-index: 0;
 }
 
 .profile-actions a::before {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--arc);
-  content: "";
-  transform: translateY(100%);
-  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  clip-path: polygon(0 14%, 100% 7%, 100% 45%, 0 53%);
+  text-shadow: -3px 0 6px rgba(85, 230, 220, 0.58);
+}
+
+.profile-actions a::after {
+  clip-path: polygon(0 52%, 100% 44%, 100% 88%, 0 95%);
+  text-shadow: 3px 0 6px rgba(240, 68, 56, 0.5);
 }
 
 .profile-actions a:hover,
 .profile-actions a:focus-visible {
-  border-color: var(--arc);
-  color: var(--obsidian);
-  text-shadow: none;
+  color: var(--white);
+  animation: profile-action-intrusion-core 2400ms steps(1, end) infinite;
 }
 
 .profile-actions a:hover::before,
 .profile-actions a:focus-visible::before {
-  transform: translateY(0);
+  animation: profile-action-intrusion-upper 2400ms steps(1, end) infinite;
+}
+
+.profile-actions a:hover::after,
+.profile-actions a:focus-visible::after {
+  animation: profile-action-intrusion-lower 2400ms steps(1, end) infinite;
 }
 
 @keyframes profile-status-pulse {
@@ -341,11 +481,105 @@ const clearProfileContext = () => clearInteraction();
   }
 }
 
-@media (max-width: 760px) {
-  .profile-frame {
-    transform: translateX(var(--profile-offset-x, 0px));
+@keyframes profile-action-intrusion-core {
+  0% {
+    background-position: 50% 34%;
+    background-size: 72% 1px;
+    border-color: var(--arc);
+    color: rgba(232, 236, 233, 0.16);
+    filter: brightness(1.7);
+    text-shadow: -2px 0 rgba(85, 230, 220, 0.74), 2px 0 rgba(240, 68, 56, 0.68);
   }
+  3% {
+    background-position: 50% 68%;
+    background-size: 36% 1px;
+    border-color: rgba(240, 68, 56, 0.7);
+    color: var(--white);
+    filter: none;
+    text-shadow: 2px 0 rgba(240, 68, 56, 0.5);
+  }
+  6%,
+  52%,
+  64%,
+  100% {
+    background-position: 50% -1px;
+    background-size: 0 1px;
+    border-color: var(--line);
+    color: var(--white);
+    filter: none;
+    text-shadow: none;
+  }
+  55% {
+    background-position: 50% 48%;
+    background-size: 64% 1px;
+    border-color: var(--arc);
+    color: rgba(232, 236, 233, 0.2);
+    filter: brightness(1.55);
+    text-shadow: -2px 0 rgba(85, 230, 220, 0.7), 2px 0 rgba(240, 68, 56, 0.56);
+  }
+  59% {
+    background-position: 50% 72%;
+    background-size: 28% 1px;
+    border-color: rgba(85, 230, 220, 0.58);
+    color: var(--white);
+    filter: none;
+    text-shadow: 2px 0 rgba(240, 68, 56, 0.38);
+  }
+}
 
+@keyframes profile-action-intrusion-upper {
+  0% {
+    opacity: 0.92;
+    transform: translateX(-4px) scaleX(1.025) skewX(-2deg);
+  }
+  3% {
+    opacity: 0.26;
+    transform: translateX(2px) scaleX(0.99);
+  }
+  6%,
+  52%,
+  64%,
+  100% {
+    opacity: 0;
+    transform: translateX(0) scaleX(1);
+  }
+  55% {
+    opacity: 0.72;
+    transform: translateX(-3px) scaleX(1.025);
+  }
+  59% {
+    opacity: 0.18;
+    transform: translateX(2px) scaleX(0.99);
+  }
+}
+
+@keyframes profile-action-intrusion-lower {
+  0% {
+    opacity: 0.72;
+    transform: translateX(4px) scaleX(1.025) skewX(2deg);
+  }
+  3% {
+    opacity: 0.2;
+    transform: translateX(-2px) scaleX(0.99);
+  }
+  6%,
+  52%,
+  64%,
+  100% {
+    opacity: 0;
+    transform: translateX(0) scaleX(1);
+  }
+  55% {
+    opacity: 0.64;
+    transform: translateX(3px) scaleX(1.025);
+  }
+  59% {
+    opacity: 0.16;
+    transform: translateX(-2px) scaleX(0.99);
+  }
+}
+
+@media (max-width: 760px) {
   .operator-profile-card {
     min-height: 500px;
     padding: 24px;
@@ -365,11 +599,29 @@ const clearProfileContext = () => clearInteraction();
 
 @media (prefers-reduced-motion: reduce) {
   .profile-frame,
+  .profile-frame:hover {
+    transform: translate3d(var(--profile-offset-x, 0px), 0, 0);
+  }
+
+  .profile-frame,
   .profile-avatar img,
   .operator-profile-card::after,
   .profile-actions a,
-  .profile-actions a::before {
+  .profile-actions a::before,
+  .profile-actions a::after {
     transition-duration: 0.01ms !important;
+  }
+
+  .profile-actions a:hover,
+  .profile-actions a:focus-visible {
+    border-color: var(--arc);
+    animation: none;
+  }
+
+  .profile-actions a::before,
+  .profile-actions a::after {
+    animation: none !important;
+    opacity: 0;
   }
 
   .profile-status-line strong {
