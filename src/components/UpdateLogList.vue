@@ -11,9 +11,9 @@ type UpdateLog = {
 const updateLogs: UpdateLog[] = [
   {
     id: "site-launched",
-    title: "网站上线了",
+    title: "网站上线了喵",
     date: "2026.07.16",
-    paragraphs: ["网站上线了"],
+    paragraphs: ["网站上线了喵"],
   },
 ];
 
