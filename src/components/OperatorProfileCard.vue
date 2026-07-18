@@ -5,12 +5,16 @@ import { useInteractionContext } from "../composables/useInteractionContext";
 
 const { setInteraction, clearInteraction } = useInteractionContext();
 const pointerOffset = ref({ x: 0, y: 0 });
+const pointerTilt = ref({ x: 0, y: 0 });
 const profileFrameStyle = computed(() => ({
   "--profile-pointer-x": `${pointerOffset.value.x}px`,
   "--profile-pointer-y": `${pointerOffset.value.y}px`,
+  "--profile-tilt-x": `${pointerTilt.value.x}deg`,
+  "--profile-tilt-y": `${pointerTilt.value.y}deg`,
 }));
 
 const PROFILE_POINTER_OFFSET = 7;
+const PROFILE_POINTER_TILT = 3;
 const ACTION_SCRAMBLE_INTERVAL = 60;
 const ACTION_SCRAMBLE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%*+-/<>[]";
 const ACTION_LABELS = {
@@ -92,15 +96,20 @@ const updateProfileOffset = (event: PointerEvent) => {
     Math.min(1, ((event.clientY - bounds.top) / bounds.height) * 2 - 1),
   );
 
-  // WHY: 只做轻微平移，避免重新引入用户明确排除的倾斜与透视感。
+  // WHY: 平移维持原有跟随感，反向映射的微倾斜让卡片朝指针抬起且不过度抢眼。
   pointerOffset.value = {
     x: normalizedX * PROFILE_POINTER_OFFSET,
     y: normalizedY * PROFILE_POINTER_OFFSET,
+  };
+  pointerTilt.value = {
+    x: normalizedY * -PROFILE_POINTER_TILT,
+    y: normalizedX * PROFILE_POINTER_TILT,
   };
 };
 
 const leaveProfile = () => {
   pointerOffset.value = { x: 0, y: 0 };
+  pointerTilt.value = { x: 0, y: 0 };
   clearProfileContext();
 };
 
@@ -210,18 +219,24 @@ onBeforeUnmount(() => {
 .profile-frame {
   width: 100%;
   padding: 3px;
+  transform-origin: center;
   transform: translate3d(var(--profile-offset-x, 0px), 0, 0);
   transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .profile-frame:hover {
-    transform: translate3d(
-      calc(var(--profile-offset-x, 0px) + var(--profile-pointer-x, 0px)),
-      var(--profile-pointer-y, 0px),
-      0
-    );
+    transform:
+      perspective(900px)
+      translate3d(
+        calc(var(--profile-offset-x, 0px) + var(--profile-pointer-x, 0px)),
+        var(--profile-pointer-y, 0px),
+        0
+      )
+      rotateX(var(--profile-tilt-x, 0deg))
+      rotateY(var(--profile-tilt-y, 0deg));
     transition-duration: 160ms;
+    will-change: transform;
   }
 }
 
